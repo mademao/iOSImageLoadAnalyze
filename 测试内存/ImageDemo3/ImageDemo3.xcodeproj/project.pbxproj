@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		412859C824D051100031C997 /* small.png in Resources */ = {isa = PBXBuildFile; fileRef = 412859C724D0510F0031C997 /* small.png */; };
 		412859C924D051100031C997 /* small.png in Resources */ = {isa = PBXBuildFile; fileRef = 412859C724D0510F0031C997 /* small.png */; };
+		41511FD824D3C69000938651 /* 11.png in Resources */ = {isa = PBXBuildFile; fileRef = 41511FD724D3C69000938651 /* 11.png */; };
+		41511FD924D3C69000938651 /* 11.png in Resources */ = {isa = PBXBuildFile; fileRef = 41511FD724D3C69000938651 /* 11.png */; };
 		415E9C0F24C028DC008D2FC3 /* NSObject+Hook.m in Sources */ = {isa = PBXBuildFile; fileRef = 415E9C0E24C028DC008D2FC3 /* NSObject+Hook.m */; };
 		415E9C1124C06EA7008D2FC3 /* biggif.gif in Resources */ = {isa = PBXBuildFile; fileRef = 415E9C1024C06EA7008D2FC3 /* biggif.gif */; };
 		415E9C1624C15E10008D2FC3 /* 2.jpeg in Resources */ = {isa = PBXBuildFile; fileRef = 415E9C1524C15E10008D2FC3 /* 2.jpeg */; };
@@ -63,6 +65,7 @@
 
 /* Begin PBXFileReference section */
 		412859C724D0510F0031C997 /* small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = small.png; sourceTree = "<group>"; };
+		41511FD724D3C69000938651 /* 11.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = 11.png; sourceTree = "<group>"; };
 		415E9C0D24C028DC008D2FC3 /* NSObject+Hook.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSObject+Hook.h"; sourceTree = "<group>"; };
 		415E9C0E24C028DC008D2FC3 /* NSObject+Hook.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSObject+Hook.m"; sourceTree = "<group>"; };
 		415E9C1024C06EA7008D2FC3 /* biggif.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = biggif.gif; sourceTree = "<group>"; };
@@ -156,6 +159,7 @@
 				415E9C2524C5393F008D2FC3 /* jpg.txt */,
 				415E9C2424C5393F008D2FC3 /* png.txt */,
 				415E9C3224C586D5008D2FC3 /* 1.png */,
+				41511FD724D3C69000938651 /* 11.png */,
 				41B31AEB24C7193A00CEACD8 /* midgif.gif */,
 				412859C724D0510F0031C997 /* small.png */,
 			);
@@ -254,6 +258,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				41511FD824D3C69000938651 /* 11.png in Resources */,
 				415E9C2624C5393F008D2FC3 /* png.txt in Resources */,
 				41B31AEC24C7193A00CEACD8 /* midgif.gif in Resources */,
 				415E9C3324C586D5008D2FC3 /* 1.png in Resources */,
@@ -272,6 +277,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				41B31AE724C7115200CEACD8 /* 1.png in Resources */,
+				41511FD924D3C69000938651 /* 11.png in Resources */,
 				41B31AE624C7115200CEACD8 /* 2.jpeg in Resources */,
 				41B31AED24C7193A00CEACD8 /* midgif.gif in Resources */,
 				412859C924D051100031C997 /* small.png in Resources */,
@@ -454,14 +460,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 75C77V5UHU;
+				DEVELOPMENT_TEAM = 8BF66UA5FJ;
 				INFOPLIST_FILE = ImageDemo3/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.mademao.ImageDemo31;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mademao.ImageDemo3;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -472,14 +478,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 75C77V5UHU;
+				DEVELOPMENT_TEAM = 8BF66UA5FJ;
 				INFOPLIST_FILE = ImageDemo3/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.mademao.ImageDemo31;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mademao.ImageDemo3;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -489,7 +495,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 75C77V5UHU;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 8BF66UA5FJ;
 				INFOPLIST_FILE = BaseKeyboard/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -497,7 +504,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.mademao.ImageDemo31.BaseKeyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mademao.ImageDemo3.BaseKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -508,7 +515,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 75C77V5UHU;
+				DEVELOPMENT_TEAM = 8BF66UA5FJ;
 				INFOPLIST_FILE = BaseKeyboard/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -516,7 +523,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.mademao.ImageDemo31.BaseKeyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mademao.ImageDemo3.BaseKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";

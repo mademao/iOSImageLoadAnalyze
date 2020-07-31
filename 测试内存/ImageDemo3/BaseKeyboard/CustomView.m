@@ -11,8 +11,9 @@
 #import "SGIImageMmapManager.h"
 #import "TYStatistics.h"
 
+//#define TEST_GIF_UIKieAnalysis_CoreAnimationDecode
 //#define TEST_GIF_ImageIOAnalysis_CoreAnimationDecode
-//#define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode
+#define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode
 #define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode_Small
 #define TEST_MMAP
 #define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode_BitmapContext
@@ -32,7 +33,84 @@ CGColorSpaceRef YYCGColorSpaceGetDeviceRGB() {
     return space;
 }
 
-#if defined(TEST_GIF_ImageIOAnalysis_CoreAnimationDecode)
+#if defined(TEST_GIF_UIKieAnalysis_CoreAnimationDecode)
+
+/*
+gif大小1.31MB，gif图片解析需要内存5.25MB
+ 测试ImageIO_GIF_Data、GIFBufferInfo和ColorIndex是否被计算入系统内存大小
+ 1.iOS13以下 iPhone5s:
+ 最后保留：
+ VM:ImageIO_GIF_Data    5.25MB  ImageIO     ImageIO_Malloc
+ Malloc 5.25MB          5.25MB  ImageIO     GlobalGIFInfo::getBufferInfo(unsigned int, bool)
+ 临时使用：
+ Malloc 1.31MB          1.31MB  ImageIO     GIFReadPlugin::doCopyImageBlockSet(GlobalGIFInfo*, unsigned char*, unsigned long, GIFBufferInfo*, bool*)
+ 
+ 在第5次时发生低内存崩溃
+ 结论：解码中会有3类内存
+ （1）解码后数据：ImageIO_GIF_Data 计算在消耗内
+ （2）上一帧保存数据：GIFBufferInfo 计算在消耗内
+ （3）像素下标数据：临时使用，malloc，计算在消耗内
+ 
+ 2.iOS13以上 iPhone Xs Max：
+ 数据及结论同上，会在第6次时发生低内存崩溃，崩溃在GIFReadPlugin::CreateFrameBufferAtIndex(CGRect const&, unsigned long, IIOImageReadSession*, GlobalGIFInfo*, ReadPluginData const&, GIFPluginData const&)，此步会生成像素下标数据
+*/
+
+@interface CustomView ()
+
+@property (nonatomic, strong) UIImageView *imageView;
+@property (nonatomic, strong) UILabel *label;
+@property (nonatomic, strong) NSMutableArray<UIImage *> *imageArray;
+@property (nonatomic, strong) NSData *data;
+
+@end
+
+@implementation CustomView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    if (self = [super initWithFrame:frame]) {
+        self.backgroundColor = [UIColor redColor];
+        
+        self.imageView = [[UIImageView alloc] initWithFrame:self.bounds];
+        self.imageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [self addSubview:self.imageView];
+        
+        self.label = [[UILabel alloc] initWithFrame:self.bounds];
+        self.label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        self.label.textAlignment = NSTextAlignmentCenter;
+        self.label.textColor = [UIColor greenColor];
+        [self addSubview:self.label];
+        
+        NSString *fileString = [[NSBundle mainBundle] pathForResource:@"midgif" ofType:@"gif"];
+        self.data = [NSData dataWithContentsOfFile:fileString];
+    }
+    return self;
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    UIImage *image = [UIImage imageWithData:self.data];
+    
+    [self.imageArray addObject:image];
+    self.imageView.image = image;
+    self.label.text = [NSString stringWithFormat:@"%@", @(self.imageArray.count)];
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self touchesEnded:nil withEvent:nil];
+    });
+}
+
+- (NSMutableArray<UIImage *> *)imageArray
+{
+    if (!_imageArray) {
+        _imageArray = [NSMutableArray array];
+    }
+    return _imageArray;
+}
+
+@end
+
+#elif defined(TEST_GIF_ImageIOAnalysis_CoreAnimationDecode)
 
 /*
 gif大小1.31MB，gif图片解析需要内存5.25MB
@@ -635,7 +713,7 @@ gif大小1.31MB，gif图片解析需要内存5.25MB
         self.label.textColor = [UIColor greenColor];
         [self addSubview:self.label];
         
-        NSString *fileString = [[NSBundle mainBundle] pathForResource:@"1" ofType:@"png"];
+        NSString *fileString = [[NSBundle mainBundle] pathForResource:@"11" ofType:@"png"];
         self.data = [NSData dataWithContentsOfFile:fileString];
     }
     return self;
