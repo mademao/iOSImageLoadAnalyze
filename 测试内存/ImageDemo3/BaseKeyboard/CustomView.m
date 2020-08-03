@@ -11,10 +11,9 @@
 #import "SGIImageMmapManager.h"
 #import "TYStatistics.h"
 
-//#define TEST_GIF_UIKieAnalysis_CoreAnimationDecode
-//#define TEST_GIF_ImageIOAnalysis_CoreAnimationDecode
+#define TEST_GIF_UIKieAnalysis_CoreAnimationDecode
+#define TEST_GIF_ImageIOAnalysis_CoreAnimationDecode
 #define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode
-#define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode_Small
 #define TEST_MMAP
 #define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode_BitmapContext
 #define TEST_PNG_ImageIOAnalysis_CoreAnimationDecode
@@ -267,125 +266,6 @@ gif大小1.31MB，gif图片解析需要内存5.25MB
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     NSInteger index = self.imageArray.count % 20;
-    CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(self.imageSource, index, NULL);
-    
-    NSInteger width = 0, height = 0;
-    CFTypeRef value = NULL;
-    value = CFDictionaryGetValue(properties, kCGImagePropertyPixelWidth);
-    if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &width);
-    value = CFDictionaryGetValue(properties, kCGImagePropertyPixelHeight);
-    if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &height);
-    
-    CGImageRef imageRef = CGImageSourceCreateImageAtIndex(self.imageSource, index, (CFDictionaryRef)@{(id)kCGImageSourceShouldCache:@(YES)});
-
-    CGImageAlphaInfo alphaInfo = CGImageGetAlphaInfo(imageRef) & kCGBitmapAlphaInfoMask;
-    BOOL hasAlpha = NO;
-    if (alphaInfo == kCGImageAlphaPremultipliedLast ||
-        alphaInfo == kCGImageAlphaPremultipliedFirst ||
-        alphaInfo == kCGImageAlphaLast ||
-        alphaInfo == kCGImageAlphaFirst) {
-        hasAlpha = YES;
-    }
-    CGBitmapInfo bitmapInfo = kCGBitmapByteOrder32Host;
-    bitmapInfo |= hasAlpha ? kCGImageAlphaPremultipliedFirst : kCGImageAlphaNoneSkipFirst;
-    CGContextRef context = CGBitmapContextCreate(NULL, width, height, 8, 0, YYCGColorSpaceGetDeviceRGB(), bitmapInfo);
-    CGContextDrawImage(context, CGRectMake(0, 0, width, height), imageRef);
-    CGImageRef newImage = CGBitmapContextCreateImage(context);
-
-    UIImage *image = [UIImage imageWithCGImage:newImage];
-
-    CGContextRelease(context);
-    CGImageRelease(newImage);
-    
-    CGImageRelease(imageRef);
-    CFRelease(properties);
-    
-    [self.imageArray addObject:image];
-    self.imageView.image = image;
-    self.label.text = [NSString stringWithFormat:@"%@", @(self.imageArray.count)];
-    NSLog(@"---%@", @(self.imageArray.count));
-    
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self touchesEnded:nil withEvent:nil];
-    });
-}
-
-- (NSMutableArray<UIImage *> *)imageArray
-{
-    if (!_imageArray) {
-        _imageArray = [NSMutableArray array];
-    }
-    return _imageArray;
-}
-
-@end
-
-
-#elif defined(TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode_Small)
-
-/*
-gif大小1.31MB，gif图片解析需要内存5.25MB
- 测试ProviderData是否被计算入系统内存大小
- 1.iOS13以下 iPhone5s:
- 最后保留：
- VM:CG raster data      5.25MB  CoreGraphics        CGDataProviderCreateWithCopyOfData
- 临时使用：
- 上一个测试中所用到的内存
- (1)VM:CG image         5.25MB  CoreGraphics        CGBitmapAllocateData
- 
- 在第213次时发生崩溃，有低内存崩溃日志，但日志中进程所占内存保持在10M左右，发生崩溃时间是在ProviderData共计1G左右
- 结论：解码中除上一个测试所用到的内存，还有1类内存
- （1）绘制解码后数据：ProviderData 不计算在消耗内，但可能受系统限制，下一步进行验证
- （2）画布内存：BitmapAllocateData 暂不清楚是否计算在消耗内，下一步进行验证
- 
- 2.iOS13以上 iPhone Xs Max：
- 最后保留：
-    同iOS13以下
- 临时使用：
-    同iOS13以下
-    （1）CGSImageHandle   5.27MB  CoreGraphics    create_image_data_handle
- 
- 测试了1000次未发生崩溃，Xcode显示内存稳定
- 结论：解码中除上一个测试所用到的内存，还有2类内存（其中绘制解码后数据同iOS13以下）
- （1）CGSImageHandle：临时使用，malloc，计算在消耗内
-*/
-
-@interface CustomView ()
-
-@property (nonatomic, strong) UIImageView *imageView;
-@property (nonatomic, strong) UILabel *label;
-@property (nonatomic, strong) NSMutableArray<UIImage *> *imageArray;
-@property (nonatomic, assign) CGImageSourceRef imageSource;
-
-@end
-
-@implementation CustomView
-
-- (instancetype)initWithFrame:(CGRect)frame
-{
-    if (self = [super initWithFrame:frame]) {
-        self.backgroundColor = [UIColor redColor];
-        
-        self.imageView = [[UIImageView alloc] initWithFrame:self.bounds];
-        self.imageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        [self addSubview:self.imageView];
-        
-        self.label = [[UILabel alloc] initWithFrame:self.bounds];
-        self.label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        self.label.textAlignment = NSTextAlignmentCenter;
-        self.label.textColor = [UIColor greenColor];
-        [self addSubview:self.label];
-        
-        NSString *fileString = [[NSBundle mainBundle] pathForResource:@"small" ofType:@"png"];
-        NSData *data = [NSData dataWithContentsOfFile:fileString];
-        self.imageSource = CGImageSourceCreateWithData((__bridge CFDataRef)data, NULL);
-    }
-    return self;
-}
-
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-    NSInteger index = 0;
     CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(self.imageSource, index, NULL);
     
     NSInteger width = 0, height = 0;
