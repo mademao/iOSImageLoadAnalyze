@@ -11,13 +11,15 @@
 #import "SGIImageMmapManager.h"
 #import "TYStatistics.h"
 
-#define TEST_GIF_UIKieAnalysis_CoreAnimationDecode
+//#define TEST_PNG_UIKitAnalysis_CoreAnimationDecode
+//#define TEST_PNG_ImageIOAnalysis_CoreAnimationDecode
+//#define TEST_PNG_ImageIOAnalysis_CoreGraphicsDecode
+//#define TEST_PNG_ImageIOAnalysis_CoreGraphicsDecode_BitmapContext
+//#define TEST_MMAP
+#define TEST_GIF_UIKitAnalysis_CoreAnimationDecode
 #define TEST_GIF_ImageIOAnalysis_CoreAnimationDecode
 #define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode
-#define TEST_MMAP
 #define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode_BitmapContext
-#define TEST_PNG_ImageIOAnalysis_CoreAnimationDecode
-#define TEST_PNG_ImageIOAnalysis_CoreGraphicsDecode
 #define TEST_JPG_ImageIOAnalysis_CoreAnimationDecode
 #define TEST_JPG_ImageIOAnalysis_CoreGraphicsDecode
 
@@ -32,7 +34,414 @@ CGColorSpaceRef YYCGColorSpaceGetDeviceRGB() {
     return space;
 }
 
-#if defined(TEST_GIF_UIKieAnalysis_CoreAnimationDecode)
+#if defined(TEST_PNG_UIKitAnalysis_CoreAnimationDecode)
+
+/*
+ png大小8.94MB，PNG图片解析需要内存13.41MB
+ 
+ CoreaAnimation直接调用PNGReadPlugin解码，只有ImageIO_PNG_Data产生
+ iPhone5s:进行3次时，发生崩溃，有低内存崩溃日志；iPhone Xs Max:进行4次时，发生崩溃，有低内存崩溃日志
+ VM:ImageIO_PNG_Data    13.73MB     ImageIO     ImageIO_Malloc
+ 
+ 结论：ImageIO_PNG_Data计算在消耗内
+ */
+
+@interface CustomView ()
+
+@property (nonatomic, strong) UIImageView *imageView;
+@property (nonatomic, strong) UILabel *label;
+@property (nonatomic, strong) NSMutableArray<UIImage *> *imageArray;
+@property (nonatomic, strong) NSData *data;
+
+@end
+
+@implementation CustomView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    if (self = [super initWithFrame:frame]) {
+        self.backgroundColor = [UIColor redColor];
+        
+        self.imageView = [[UIImageView alloc] initWithFrame:self.bounds];
+        self.imageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [self addSubview:self.imageView];
+        
+        self.label = [[UILabel alloc] initWithFrame:self.bounds];
+        self.label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        self.label.textAlignment = NSTextAlignmentCenter;
+        self.label.textColor = [UIColor greenColor];
+        [self addSubview:self.label];
+        
+        NSString *fileString = [[NSBundle mainBundle] pathForResource:@"1" ofType:@"png"];
+        self.data = [NSData dataWithContentsOfFile:fileString];
+    }
+    return self;
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    UIImage *image = [UIImage imageWithData:self.data];
+    
+    [self.imageArray addObject:image];
+    self.imageView.image = image;
+    self.label.text = [NSString stringWithFormat:@"%@", @(self.imageArray.count)];
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self touchesEnded:nil withEvent:nil];
+    });
+}
+
+- (NSMutableArray<UIImage *> *)imageArray
+{
+    if (!_imageArray) {
+        _imageArray = [NSMutableArray array];
+    }
+    return _imageArray;
+}
+
+@end
+
+#elif defined(TEST_PNG_ImageIOAnalysis_CoreAnimationDecode)
+
+/*
+ png大小8.94MB，PNG图片解析需要内存13.41MB
+ 
+ CoreaAnimation直接调用PNGReadPlugin解码，只有ImageIO_PNG_Data产生
+ iPhone5s:进行3次时，发生崩溃，有低内存崩溃日志；iPhone Xs Max:进行4次时，发生崩溃，有低内存崩溃日志
+ VM:ImageIO_PNG_Data    13.73MB     ImageIO     ImageIO_Malloc
+ 
+ 结论：ImageIO_PNG_Data计算在消耗内
+ */
+
+@interface CustomView ()
+
+@property (nonatomic, strong) UIImageView *imageView;
+@property (nonatomic, strong) UILabel *label;
+@property (nonatomic, strong) NSMutableArray<UIImage *> *imageArray;
+@property (nonatomic, strong) NSData *data;
+
+@end
+
+@implementation CustomView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    if (self = [super initWithFrame:frame]) {
+        self.backgroundColor = [UIColor redColor];
+        
+        self.imageView = [[UIImageView alloc] initWithFrame:self.bounds];
+        self.imageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [self addSubview:self.imageView];
+        
+        self.label = [[UILabel alloc] initWithFrame:self.bounds];
+        self.label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        self.label.textAlignment = NSTextAlignmentCenter;
+        self.label.textColor = [UIColor greenColor];
+        [self addSubview:self.label];
+        
+        NSString *fileString = [[NSBundle mainBundle] pathForResource:@"1" ofType:@"png"];
+        self.data = [NSData dataWithContentsOfFile:fileString];
+    }
+    return self;
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    CGImageSourceRef imageSource = CGImageSourceCreateWithData((__bridge CFDataRef)self.data, NULL);
+    CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, NULL);
+    
+    NSInteger width = 0, height = 0;
+    CFTypeRef value = NULL;
+    value = CFDictionaryGetValue(properties, kCGImagePropertyPixelWidth);
+    if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &width);
+    value = CFDictionaryGetValue(properties, kCGImagePropertyPixelHeight);
+    if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &height);
+    
+    CGImageRef imageRef = CGImageSourceCreateImageAtIndex(imageSource, 0, (CFDictionaryRef)@{(id)kCGImageSourceShouldCache:@(YES)});
+
+    UIImage *image = [UIImage imageWithCGImage:imageRef];
+    
+    CGImageRelease(imageRef);
+    CFRelease(properties);
+    
+    [self.imageArray addObject:image];
+    self.imageView.image = image;
+    self.label.text = [NSString stringWithFormat:@"%@", @(self.imageArray.count)];
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self touchesEnded:nil withEvent:nil];
+    });
+}
+
+- (NSMutableArray<UIImage *> *)imageArray
+{
+    if (!_imageArray) {
+        _imageArray = [NSMutableArray array];
+    }
+    return _imageArray;
+}
+
+@end
+
+#elif defined(TEST_PNG_ImageIOAnalysis_CoreGraphicsDecode)
+
+/*
+ png大小8.94MB，PNG图片解析需要内存13.41MB
+ 测试CoreGraphics解码是否占用内存
+ 
+ CoreGraphics解码最后只有DataProvider产生
+ iPhone5s:进行53次时，发生崩溃，Xcode内存显示稳定；iPhone Xs Max:进行300次时，未发生崩溃，Xcode内存显示稳定
+ 
+ 结论：CoreGraphics解码png图片内存稳定，但需注意低版本手机上DataProvider通过mmap映射大小有限制
+ */
+
+@interface CustomView ()
+
+@property (nonatomic, strong) UIImageView *imageView;
+@property (nonatomic, strong) UILabel *label;
+@property (nonatomic, strong) NSMutableArray<UIImage *> *imageArray;
+@property (nonatomic, strong) NSData *data;
+
+@end
+
+@implementation CustomView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    if (self = [super initWithFrame:frame]) {
+        self.backgroundColor = [UIColor redColor];
+        
+        self.imageView = [[UIImageView alloc] initWithFrame:self.bounds];
+        self.imageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [self addSubview:self.imageView];
+        
+        self.label = [[UILabel alloc] initWithFrame:self.bounds];
+        self.label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        self.label.textAlignment = NSTextAlignmentCenter;
+        self.label.textColor = [UIColor greenColor];
+        [self addSubview:self.label];
+        
+        NSString *fileString = [[NSBundle mainBundle] pathForResource:@"1" ofType:@"png"];
+        self.data = [NSData dataWithContentsOfFile:fileString];
+    }
+    return self;
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    CGImageSourceRef imageSource = CGImageSourceCreateWithData((__bridge CFDataRef)self.data, NULL);
+    CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, NULL);
+    
+    NSInteger width = 0, height = 0;
+    CFTypeRef value = NULL;
+    value = CFDictionaryGetValue(properties, kCGImagePropertyPixelWidth);
+    if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &width);
+    value = CFDictionaryGetValue(properties, kCGImagePropertyPixelHeight);
+    if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &height);
+    
+    CGImageRef imageRef = CGImageSourceCreateImageAtIndex(imageSource, 0, (CFDictionaryRef)@{(id)kCGImageSourceShouldCache:@(YES)});
+
+    CGImageAlphaInfo alphaInfo = CGImageGetAlphaInfo(imageRef) & kCGBitmapAlphaInfoMask;
+    BOOL hasAlpha = NO;
+    if (alphaInfo == kCGImageAlphaPremultipliedLast ||
+        alphaInfo == kCGImageAlphaPremultipliedFirst ||
+        alphaInfo == kCGImageAlphaLast ||
+        alphaInfo == kCGImageAlphaFirst) {
+        hasAlpha = YES;
+    }
+    CGBitmapInfo bitmapInfo = kCGBitmapByteOrder32Host;
+    bitmapInfo |= hasAlpha ? kCGImageAlphaPremultipliedFirst : kCGImageAlphaNoneSkipFirst;
+    CGContextRef context = CGBitmapContextCreate(NULL, width, height, 8, 0, YYCGColorSpaceGetDeviceRGB(), bitmapInfo);
+    CGContextDrawImage(context, CGRectMake(0, 0, width, height), imageRef);
+    CGImageRef newImage = CGBitmapContextCreateImage(context);
+
+    UIImage *image = [UIImage imageWithCGImage:newImage];
+
+    CGContextRelease(context);
+    CGImageRelease(newImage);
+    
+    CGImageRelease(imageRef);
+    CFRelease(properties);
+    CFRelease(imageSource);
+    
+    [self.imageArray addObject:image];
+    self.imageView.image = image;
+    self.label.text = [NSString stringWithFormat:@"%@", @(self.imageArray.count)];
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self touchesEnded:nil withEvent:nil];
+    });
+}
+
+- (NSMutableArray<UIImage *> *)imageArray
+{
+    if (!_imageArray) {
+        _imageArray = [NSMutableArray array];
+    }
+    return _imageArray;
+}
+
+@end
+
+#elif defined(TEST_PNG_ImageIOAnalysis_CoreGraphicsDecode_BitmapContext)
+
+/*
+ png大小8.94MB，PNG图片解析需要内存13.41MB
+ 测试CoreGraphics解码是否占用内存
+ 
+ CoreGraphics解码最后只有DataProvider产生
+ iPhone5s:进行27次时，发生崩溃，Xcode内存显示稳定；iPhone Xs Max:进行300次时，未发生崩溃，Xcode内存显示稳定
+ 
+ 结论：CoreGraphics解码png图片内存稳定，但需注意低版本手机上DataProvider通过mmap映射大小有限制
+ */
+
+@interface CustomView ()
+
+@property (nonatomic, strong) UIImageView *imageView;
+@property (nonatomic, strong) UILabel *label;
+@property (nonatomic, strong) NSMutableArray<UIImage *> *imageArray;
+@property (nonatomic, strong) NSData *data;
+
+@end
+
+@implementation CustomView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    if (self = [super initWithFrame:frame]) {
+        self.backgroundColor = [UIColor redColor];
+        
+        self.imageView = [[UIImageView alloc] initWithFrame:self.bounds];
+        self.imageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [self addSubview:self.imageView];
+        
+        self.label = [[UILabel alloc] initWithFrame:self.bounds];
+        self.label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        self.label.textAlignment = NSTextAlignmentCenter;
+        self.label.textColor = [UIColor greenColor];
+        [self addSubview:self.label];
+        
+        NSString *fileString = [[NSBundle mainBundle] pathForResource:@"1" ofType:@"png"];
+        self.data = [NSData dataWithContentsOfFile:fileString];
+    }
+    return self;
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    CGImageSourceRef imageSource = CGImageSourceCreateWithData((__bridge CFDataRef)self.data, NULL);
+    CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, NULL);
+    
+    NSInteger width = 0, height = 0;
+    CFTypeRef value = NULL;
+    value = CFDictionaryGetValue(properties, kCGImagePropertyPixelWidth);
+    if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &width);
+    value = CFDictionaryGetValue(properties, kCGImagePropertyPixelHeight);
+    if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &height);
+    
+    CGImageRef imageRef = CGImageSourceCreateImageAtIndex(imageSource, 0, (CFDictionaryRef)@{(id)kCGImageSourceShouldCache:@(YES)});
+
+    CGImageAlphaInfo alphaInfo = CGImageGetAlphaInfo(imageRef) & kCGBitmapAlphaInfoMask;
+    BOOL hasAlpha = NO;
+    if (alphaInfo == kCGImageAlphaPremultipliedLast ||
+        alphaInfo == kCGImageAlphaPremultipliedFirst ||
+        alphaInfo == kCGImageAlphaLast ||
+        alphaInfo == kCGImageAlphaFirst) {
+        hasAlpha = YES;
+    }
+    CGBitmapInfo bitmapInfo = kCGBitmapByteOrder32Host;
+    bitmapInfo |= hasAlpha ? kCGImageAlphaPremultipliedFirst : kCGImageAlphaNoneSkipFirst;
+    CGContextRef context = CGBitmapContextCreate(NULL, width, height, 8, 0, YYCGColorSpaceGetDeviceRGB(), bitmapInfo);
+    CGContextDrawImage(context, CGRectMake(0, 0, width, height), imageRef);
+    CGImageRef newImage = CGBitmapContextCreateImage(context);
+
+    UIImage *image = [UIImage imageWithCGImage:newImage];
+
+//    CGContextRelease(context);
+    CGImageRelease(newImage);
+    
+    CGImageRelease(imageRef);
+    CFRelease(properties);
+    CFRelease(imageSource);
+    
+    [self.imageArray addObject:image];
+    self.imageView.image = image;
+    self.label.text = [NSString stringWithFormat:@"%@", @(self.imageArray.count)];
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self touchesEnded:nil withEvent:nil];
+    });
+}
+
+- (NSMutableArray<UIImage *> *)imageArray
+{
+    if (!_imageArray) {
+        _imageArray = [NSMutableArray array];
+    }
+    return _imageArray;
+}
+
+@end
+
+
+#elif defined(TEST_MMAP)
+
+/*
+ 测试mmap是否有系统内存大小限制
+ 1.iOS13以下 iPhone5s:
+ 进行到97次时，发生崩溃，并有进程崩溃日志产生，内容说明内核错误：KERN_INVALID_ADDRESS
+ 
+ 结论：mmap有内存大小限制
+ 
+ 2.iOS13以上 iPhone Xs Max：
+ 进行1000次暂未发生崩溃
+ 
+ 结论：mmap暂无内存大小限制
+*/
+
+@interface CustomView ()
+
+@property (nonatomic, strong) UILabel *label;
+@property (nonatomic, assign) NSInteger count;
+
+@end
+
+@implementation CustomView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    if (self = [super initWithFrame:frame]) {
+        self.backgroundColor = [UIColor redColor];
+        
+        self.label = [[UILabel alloc] initWithFrame:self.bounds];
+        self.label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        self.label.textAlignment = NSTextAlignmentCenter;
+        self.label.textColor = [UIColor greenColor];
+        [self addSubview:self.label];
+    }
+    return self;
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    int size = 20 * 1024.0 * 1024.0;
+    void *memory = [SGIImageMmapManager createMmapFile:[NSString stringWithFormat:@"/%@", @(self.count)] size:size];
+    memset(memory, 0, size);
+    self.count++;
+    
+    self.label.text = [NSString stringWithFormat:@"%@", @(self.count)];
+    NSLog(@"---%@", @(self.count));
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        
+        [self touchesEnded:nil withEvent:nil];
+    });
+}
+
+@end
+
+
+#elif defined(TEST_GIF_UIKitAnalysis_CoreAnimationDecode)
 
 /*
 gif大小1.31MB，gif图片解析需要内存5.25MB
@@ -212,6 +621,7 @@ gif大小1.31MB，gif图片解析需要内存5.25MB
  临时使用：
  上一个测试中所用到的内存
  (1)VM:CG image         5.25MB  CoreGraphics        CGBitmapAllocateData
+ (2)CGSImageHandle      5.25MB  CoreGraphics        create_image_data_handle
  
  在第213次时发生崩溃，有低内存崩溃日志，但日志中进程所占内存保持在10M左右，发生崩溃时间是在ProviderData共计1G左右
  结论：解码中除上一个测试所用到的内存，还有1类内存
@@ -223,11 +633,9 @@ gif大小1.31MB，gif图片解析需要内存5.25MB
     同iOS13以下
  临时使用：
     同iOS13以下
-    （1）CGSImageHandle   5.27MB  CoreGraphics    create_image_data_handle
  
  测试了1000次未发生崩溃，Xcode显示内存稳定
- 结论：解码中除上一个测试所用到的内存，还有2类内存（其中绘制解码后数据同iOS13以下）
- （1）CGSImageHandle：临时使用，malloc，计算在消耗内
+ 结论：同iOS13以下
 */
 
 @interface CustomView ()
@@ -318,63 +726,7 @@ gif大小1.31MB，gif图片解析需要内存5.25MB
 }
 
 @end
- 
 
-#elif defined(TEST_MMAP)
-
-/*
- 测试mmap是否有系统内存大小限制
- 1.iOS13以下 iPhone5s:
- 进行到97次时，发生崩溃，并有进程崩溃日志产生，内容说明内核错误：KERN_INVALID_ADDRESS
- 
- 结论：mmap有内存大小限制
- 
- 2.iOS13以上 iPhone Xs Max：
- 进行1000次暂未发生崩溃
- 
- 结论：mmap暂无内存大小限制
-*/
-
-@interface CustomView ()
-
-@property (nonatomic, strong) UILabel *label;
-@property (nonatomic, assign) NSInteger count;
-
-@end
-
-@implementation CustomView
-
-- (instancetype)initWithFrame:(CGRect)frame
-{
-    if (self = [super initWithFrame:frame]) {
-        self.backgroundColor = [UIColor redColor];
-        
-        self.label = [[UILabel alloc] initWithFrame:self.bounds];
-        self.label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        self.label.textAlignment = NSTextAlignmentCenter;
-        self.label.textColor = [UIColor greenColor];
-        [self addSubview:self.label];
-    }
-    return self;
-}
-
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-    int size = 20 * 1024.0 * 1024.0;
-    void *memory = [SGIImageMmapManager createMmapFile:[NSString stringWithFormat:@"/%@", @(self.count)] size:size];
-    memset(memory, 0, size);
-    self.count++;
-    
-    self.label.text = [NSString stringWithFormat:@"%@", @(self.count)];
-    NSLog(@"---%@", @(self.count));
-    
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        
-        [self touchesEnded:nil withEvent:nil];
-    });
-}
-
-@end
 
 #elif defined(TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode_BitmapContext)
 
@@ -469,188 +821,6 @@ gif大小1.31MB，gif图片解析需要内存5.25MB
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [self touchesEnded:nil withEvent:nil];
     });
-}
-
-@end
-
-#elif defined(TEST_PNG_ImageIOAnalysis_CoreAnimationDecode)
-
-/*
- png大小8.94MB，PNG图片解析需要内存13.41MB
- 
- CoreaAnimation直接调用PNGReadPlugin解码，只有ImageIO_PNG_Data产生
- iPhone5s:进行3次时，发生崩溃，有低内存崩溃日志；iPhone Xs Max:进行4次时，发生崩溃，有低内存崩溃日志
- VM:ImageIO_PNG_Data    13.73MB     ImageIO     ImageIO_Malloc
- 
- 结论：ImageIO_PNG_Data计算在消耗内
- */
-
-@interface CustomView ()
-
-@property (nonatomic, strong) UIImageView *imageView;
-@property (nonatomic, strong) UILabel *label;
-@property (nonatomic, strong) NSMutableArray<UIImage *> *imageArray;
-@property (nonatomic, strong) NSData *data;
-
-@end
-
-@implementation CustomView
-
-- (instancetype)initWithFrame:(CGRect)frame
-{
-    if (self = [super initWithFrame:frame]) {
-        self.backgroundColor = [UIColor redColor];
-        
-        self.imageView = [[UIImageView alloc] initWithFrame:self.bounds];
-        self.imageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        [self addSubview:self.imageView];
-        
-        self.label = [[UILabel alloc] initWithFrame:self.bounds];
-        self.label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        self.label.textAlignment = NSTextAlignmentCenter;
-        self.label.textColor = [UIColor greenColor];
-        [self addSubview:self.label];
-        
-        NSString *fileString = [[NSBundle mainBundle] pathForResource:@"1" ofType:@"png"];
-        self.data = [NSData dataWithContentsOfFile:fileString];
-    }
-    return self;
-}
-
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-    CGImageSourceRef imageSource = CGImageSourceCreateWithData((__bridge CFDataRef)self.data, NULL);
-    CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, NULL);
-    
-    NSInteger width = 0, height = 0;
-    CFTypeRef value = NULL;
-    value = CFDictionaryGetValue(properties, kCGImagePropertyPixelWidth);
-    if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &width);
-    value = CFDictionaryGetValue(properties, kCGImagePropertyPixelHeight);
-    if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &height);
-    
-    CGImageRef imageRef = CGImageSourceCreateImageAtIndex(imageSource, 0, (CFDictionaryRef)@{(id)kCGImageSourceShouldCache:@(YES)});
-
-    UIImage *image = [UIImage imageWithCGImage:imageRef];
-    
-    CGImageRelease(imageRef);
-    CFRelease(properties);
-    
-    [self.imageArray addObject:image];
-    self.imageView.image = image;
-    self.label.text = [NSString stringWithFormat:@"%@", @(self.imageArray.count)];
-    
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self touchesEnded:nil withEvent:nil];
-    });
-}
-
-- (NSMutableArray<UIImage *> *)imageArray
-{
-    if (!_imageArray) {
-        _imageArray = [NSMutableArray array];
-    }
-    return _imageArray;
-}
-
-@end
-
-#elif defined(TEST_PNG_ImageIOAnalysis_CoreGraphicsDecode)
-
-/*
- png大小8.94MB，PNG图片解析需要内存13.41MB
- 测试CoreGraphics解码是否占用内存
- 
- CoreGraphics解码最后只有DataProvider产生
- iPhone5s:进行53次时，发生崩溃，Xcode内存显示稳定；iPhone Xs Max:进行300次时，未发生崩溃，Xcode内存显示稳定
- 
- 结论：CoreGraphics解码png图片内存稳定，但需注意低版本手机上DataProvider通过mmap映射大小有限制
- */
-
-@interface CustomView ()
-
-@property (nonatomic, strong) UIImageView *imageView;
-@property (nonatomic, strong) UILabel *label;
-@property (nonatomic, strong) NSMutableArray<UIImage *> *imageArray;
-@property (nonatomic, strong) NSData *data;
-
-@end
-
-@implementation CustomView
-
-- (instancetype)initWithFrame:(CGRect)frame
-{
-    if (self = [super initWithFrame:frame]) {
-        self.backgroundColor = [UIColor redColor];
-        
-        self.imageView = [[UIImageView alloc] initWithFrame:self.bounds];
-        self.imageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        [self addSubview:self.imageView];
-        
-        self.label = [[UILabel alloc] initWithFrame:self.bounds];
-        self.label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        self.label.textAlignment = NSTextAlignmentCenter;
-        self.label.textColor = [UIColor greenColor];
-        [self addSubview:self.label];
-        
-        NSString *fileString = [[NSBundle mainBundle] pathForResource:@"11" ofType:@"png"];
-        self.data = [NSData dataWithContentsOfFile:fileString];
-    }
-    return self;
-}
-
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-    CGImageSourceRef imageSource = CGImageSourceCreateWithData((__bridge CFDataRef)self.data, NULL);
-    CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, NULL);
-    
-    NSInteger width = 0, height = 0;
-    CFTypeRef value = NULL;
-    value = CFDictionaryGetValue(properties, kCGImagePropertyPixelWidth);
-    if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &width);
-    value = CFDictionaryGetValue(properties, kCGImagePropertyPixelHeight);
-    if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &height);
-    
-    CGImageRef imageRef = CGImageSourceCreateImageAtIndex(imageSource, 0, (CFDictionaryRef)@{(id)kCGImageSourceShouldCache:@(YES)});
-
-    CGImageAlphaInfo alphaInfo = CGImageGetAlphaInfo(imageRef) & kCGBitmapAlphaInfoMask;
-    BOOL hasAlpha = NO;
-    if (alphaInfo == kCGImageAlphaPremultipliedLast ||
-        alphaInfo == kCGImageAlphaPremultipliedFirst ||
-        alphaInfo == kCGImageAlphaLast ||
-        alphaInfo == kCGImageAlphaFirst) {
-        hasAlpha = YES;
-    }
-    CGBitmapInfo bitmapInfo = kCGBitmapByteOrder32Host;
-    bitmapInfo |= hasAlpha ? kCGImageAlphaPremultipliedFirst : kCGImageAlphaNoneSkipFirst;
-    CGContextRef context = CGBitmapContextCreate(NULL, width, height, 8, 0, YYCGColorSpaceGetDeviceRGB(), bitmapInfo);
-    CGContextDrawImage(context, CGRectMake(0, 0, width, height), imageRef);
-    CGImageRef newImage = CGBitmapContextCreateImage(context);
-
-    UIImage *image = [UIImage imageWithCGImage:newImage];
-
-    CGContextRelease(context);
-    CGImageRelease(newImage);
-    
-    CGImageRelease(imageRef);
-    CFRelease(properties);
-    CFRelease(imageSource);
-    
-    [self.imageArray addObject:image];
-    self.imageView.image = image;
-    self.label.text = [NSString stringWithFormat:@"%@", @(self.imageArray.count)];
-    
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self touchesEnded:nil withEvent:nil];
-    });
-}
-
-- (NSMutableArray<UIImage *> *)imageArray
-{
-    if (!_imageArray) {
-        _imageArray = [NSMutableArray array];
-    }
-    return _imageArray;
 }
 
 @end
