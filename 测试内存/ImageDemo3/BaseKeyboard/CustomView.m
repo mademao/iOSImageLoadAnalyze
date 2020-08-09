@@ -16,6 +16,7 @@
 //#define TEST_PNG_ImageIOAnalysis_CoreGraphicsDecode
 //#define TEST_PNG_ImageIOAnalysis_CoreGraphicsDecode_BitmapContext
 //#define TEST_MMAP
+#define TEST_PNG_ImageIOAnalysis_Downsampling
 #define TEST_GIF_UIKitAnalysis_CoreAnimationDecode
 #define TEST_GIF_ImageIOAnalysis_CoreAnimationDecode
 #define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode
@@ -436,6 +437,80 @@ CGColorSpaceRef YYCGColorSpaceGetDeviceRGB() {
         
         [self touchesEnded:nil withEvent:nil];
     });
+}
+
+@end
+
+
+#elif defined(TEST_PNG_ImageIOAnalysis_Downsampling)
+
+/*
+ 下采样内部是使用CoreGraphics进行重绘解码的
+ 但比主动调用CoreGraphics来说，在触发ImageIO解码时，是直接解码为目标尺寸，所以解码时内存消耗较小
+*/
+@interface CustomView ()
+
+@property (nonatomic, strong) UIImageView *imageView;
+@property (nonatomic, strong) UILabel *label;
+@property (nonatomic, strong) NSMutableArray<UIImage *> *imageArray;
+@property (nonatomic, strong) NSData *data;
+
+@end
+
+@implementation CustomView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    if (self = [super initWithFrame:frame]) {
+        self.backgroundColor = [UIColor redColor];
+        
+        self.imageView = [[UIImageView alloc] initWithFrame:self.bounds];
+        self.imageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [self addSubview:self.imageView];
+        
+        self.label = [[UILabel alloc] initWithFrame:self.bounds];
+        self.label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        self.label.textAlignment = NSTextAlignmentCenter;
+        self.label.textColor = [UIColor greenColor];
+        [self addSubview:self.label];
+        
+        NSString *fileString = [[NSBundle mainBundle] pathForResource:@"1" ofType:@"png"];
+        self.data = [NSData dataWithContentsOfFile:fileString];
+    }
+    return self;
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    CGImageSourceRef imageSource = CGImageSourceCreateWithData((__bridge CFDataRef)self.data, NULL);
+    
+    NSDictionary *options = @{(id)kCGImageSourceShouldCacheImmediately : @(YES),
+                              (id)kCGImageSourceCreateThumbnailWithTransform : @(YES),
+                              (id)kCGImageSourceCreateThumbnailFromImageIfAbsent : @(YES),
+                              (id)kCGImageSourceThumbnailMaxPixelSize : @(1000)
+    };
+    CGImageRef imageRef = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, (CFDictionaryRef)options);
+
+    UIImage *image = [UIImage imageWithCGImage:imageRef];
+    
+    CGImageRelease(imageRef);
+    CFRelease(imageSource);
+    
+    [self.imageArray addObject:image];
+    self.imageView.image = image;
+    self.label.text = [NSString stringWithFormat:@"%@", @(self.imageArray.count)];
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self touchesEnded:nil withEvent:nil];
+    });
+}
+
+- (NSMutableArray<UIImage *> *)imageArray
+{
+    if (!_imageArray) {
+        _imageArray = [NSMutableArray array];
+    }
+    return _imageArray;
 }
 
 @end
