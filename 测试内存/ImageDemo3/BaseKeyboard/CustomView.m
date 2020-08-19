@@ -16,10 +16,10 @@
 //#define TEST_PNG_ImageIOAnalysis_CoreGraphicsDecode
 //#define TEST_PNG_ImageIOAnalysis_CoreGraphicsDecode_BitmapContext
 //#define TEST_MMAP
-#define TEST_PNG_ImageIOAnalysis_Downsampling
-#define TEST_GIF_UIKitAnalysis_CoreAnimationDecode
-#define TEST_GIF_ImageIOAnalysis_CoreAnimationDecode
-#define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode
+//#define TEST_PNG_ImageIOAnalysis_Downsampling
+//#define TEST_GIF_UIKitAnalysis_CoreAnimationDecode
+//#define TEST_GIF_ImageIOAnalysis_CoreAnimationDecode
+//#define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode
 #define TEST_GIF_ImageIOAnalysis_CoreGraphicsDecode_BitmapContext
 #define TEST_JPG_ImageIOAnalysis_CoreAnimationDecode
 #define TEST_JPG_ImageIOAnalysis_CoreGraphicsDecode
@@ -395,9 +395,9 @@ CGColorSpaceRef YYCGColorSpaceGetDeviceRGB() {
  结论：mmap有内存大小限制
  
  2.iOS13以上 iPhone Xs Max：
- 进行1000次暂未发生崩溃
+ 进行到320次时，发生崩溃，并有进程崩溃日志产生，内容说明内核错误：KERN_INVALID_ADDRESS
  
- 结论：mmap暂无内存大小限制
+ 结论：mmap有内存大小限制
 */
 
 @interface CustomView ()
@@ -814,9 +814,9 @@ gif大小1.31MB，gif图片解析需要内存5.25MB
  结论：CGBitmapAllocateData不计算在消耗内，同时由216次发生崩溃可进一步验证，mmap大小受到系统内存限制
  
  2.iOS13以上 iPhone Xs Max：
- 进行1000次，暂未发生崩溃，Xcode显示内存稳定
+ 进行到1294次时，发生崩溃，Xcode显示内存稳定
  
- 结论：CGBitmapAllocateData不计算在消耗内，mmap暂无内存大小限制
+ 结论：CGBitmapAllocateData不计算在消耗内，同时由1294次发生崩溃可进一步验证，mmap大小受到系统内存限制
 */
 
 @interface CustomView ()
