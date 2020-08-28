@@ -15,7 +15,8 @@
 //#define TEST_PNG_ImageIOAnalysis_CoreAnimationDecode
 //#define TEST_PNG_ImageIOAnalysis_CoreGraphicsDecode
 //#define TEST_PNG_ImageIOAnalysis_CoreGraphicsDecode_BitmapContext
-//#define TEST_MMAP
+//#define TEST_MMAP_Size
+//#define TEST_MMAP_Count
 //#define TEST_PNG_ImageIOAnalysis_Downsampling
 //#define TEST_GIF_UIKitAnalysis_CoreAnimationDecode
 //#define TEST_GIF_ImageIOAnalysis_CoreAnimationDecode
@@ -385,19 +386,17 @@ CGColorSpaceRef YYCGColorSpaceGetDeviceRGB() {
 @end
 
 
-#elif defined(TEST_MMAP)
+#elif defined(TEST_MMAP_Size)
 
 /*
  测试mmap是否有系统内存大小限制
  1.iOS13以下 iPhone5s:
  进行到97次时，发生崩溃，并有进程崩溃日志产生，内容说明内核错误：KERN_INVALID_ADDRESS
  
- 结论：mmap有内存大小限制
- 
  2.iOS13以上 iPhone Xs Max：
  进行到320次时，发生崩溃，并有进程崩溃日志产生，内容说明内核错误：KERN_INVALID_ADDRESS
  
- 结论：mmap有内存大小限制
+ 结论：mmap有内存大小限制，且限制受机型及机器当前状态影响
 */
 
 @interface CustomView ()
@@ -426,6 +425,61 @@ CGColorSpaceRef YYCGColorSpaceGetDeviceRGB() {
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     int size = 20 * 1024.0 * 1024.0;
+    void *memory = [SGIImageMmapManager createMmapFile:[NSString stringWithFormat:@"/%@", @(self.count)] size:size];
+    memset(memory, 0, size);
+    self.count++;
+    
+    self.label.text = [NSString stringWithFormat:@"%@", @(self.count)];
+    NSLog(@"---%@", @(self.count));
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        
+        [self touchesEnded:nil withEvent:nil];
+    });
+}
+
+@end
+
+
+#elif defined(TEST_MMAP_Count)
+
+/*
+ 测试mmap是否有系统句柄数量限制
+ 1.iOS13以下 iPhone5s:
+ 进行到2700次左右时，发生崩溃
+ 
+ 2.iOS13以上 iPhone Xs Max：
+ 进行到4500次时，发生崩溃
+ 
+ 结论：mmap有句柄数量限制，且限制受机型及机器当前状态影响
+*/
+
+@interface CustomView ()
+
+@property (nonatomic, strong) UILabel *label;
+@property (nonatomic, assign) NSInteger count;
+
+@end
+
+@implementation CustomView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    if (self = [super initWithFrame:frame]) {
+        self.backgroundColor = [UIColor redColor];
+        
+        self.label = [[UILabel alloc] initWithFrame:self.bounds];
+        self.label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        self.label.textAlignment = NSTextAlignmentCenter;
+        self.label.textColor = [UIColor greenColor];
+        [self addSubview:self.label];
+    }
+    return self;
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    int size =  50 * 1024.0;
     void *memory = [SGIImageMmapManager createMmapFile:[NSString stringWithFormat:@"/%@", @(self.count)] size:size];
     memset(memory, 0, size);
     self.count++;
