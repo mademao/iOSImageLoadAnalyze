@@ -191,7 +191,7 @@ CGColorSpaceRef YYCGColorSpaceGetDeviceRGB() {
  测试CoreGraphics解码是否占用内存
  
  CoreGraphics解码最后只有DataProvider产生
- iPhone5s:进行53次时，发生崩溃，Xcode内存显示稳定；iPhone Xs Max:进行300次时，未发生崩溃，Xcode内存显示稳定
+ iPhone5s:进行53次时，发生崩溃，Xcode内存显示稳定；iPhone Xs Max:进行320次时，发生崩溃，Xcode内存显示稳定
  
  结论：CoreGraphics解码png图片内存稳定，但需注意低版本手机上DataProvider通过mmap映射大小有限制
  */
@@ -291,7 +291,7 @@ CGColorSpaceRef YYCGColorSpaceGetDeviceRGB() {
  测试CoreGraphics解码是否占用内存
  
  CoreGraphics解码最后只有DataProvider产生
- iPhone5s:进行27次时，发生崩溃，Xcode内存显示稳定；iPhone Xs Max:进行300次时，未发生崩溃，Xcode内存显示稳定
+ iPhone5s:进行27次时，发生崩溃，Xcode内存显示稳定；iPhone Xs Max:进行163次时，发生崩溃，Xcode内存显示稳定
  
  结论：CoreGraphics解码png图片内存稳定，但需注意低版本手机上DataProvider通过mmap映射大小有限制
  */
